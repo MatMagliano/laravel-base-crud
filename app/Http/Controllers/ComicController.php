@@ -7,6 +7,13 @@ use App\Comic;
 
 class ComicController extends Controller
 {
+    private $validationComic = [
+            'title' => 'required|string|max:255',
+            'number' => 'required|numeric',
+            'page' => 'required|numeric',
+            'publishing' => 'required|string|max:255',
+            'price' => 'required|numeric',
+        ];
     /**
      * Display a listing of the resource.
      *
@@ -17,6 +24,8 @@ class ComicController extends Controller
         //
         $comics = Comic::all();
         // dd($comics);
+
+        return view('comics.index', compact('comics'));
     }
 
     /**
@@ -39,17 +48,20 @@ class ComicController extends Controller
     {
         
         $data = $request->all();
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'number' => 'required|numeric',
+            'page' => 'required|numeric',
+            'publishing' => 'required|string|max:255',
+            'price' => 'required|numeric',
+        ]);
+        // dd($data);
         $comic = new Comic;
-        $comic->title = $data['title'];
-        $comic->number = $data['number'];
-        $comic->page = $data['page'];
-        $comic->publishing = $data['publishing'];
-        $comic->price = $data['price'];
-
-        $save = $comic->save();
-
-        if ($save == true) {
-            return redirect()->route('comics.index');
+        $comic->fill($data);
+        $saved = $comic->save();
+        if ($saved == true) {
+            $comic = Comic::orderBy('id', 'desc')->first();
+            return redirect()->route('comics.index', compact('comic'));
         }
     }
 
@@ -59,9 +71,15 @@ class ComicController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function show(Comic $comic)
     {
-        //
+        // $comic = Comic::find();
+    
+        if (empty($comic)) {
+            abort('404');
+        }
+
+        return view('comics.show', compact('comic'));
     }
 
     /**
@@ -70,9 +88,12 @@ class ComicController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit($id)
+    public function edit(Comic $comic)
     {
-        //
+        if (empty($comic)) {
+            abort('404');
+        }
+        return view('comics.create', compact('comic'));
     }
 
     /**
@@ -84,7 +105,19 @@ class ComicController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        $comic = Comic::find($id);
+        if (empty($comic)) {
+            abort('404');
+        }
+        $data = $request->all();
+        $request->validate($this->validationComic);
+        // $comic->fill();
+        $update = $comic->update($data);
+        if($update) {
+            $comic = Comic::find($id);
+            return redirect()->route('comics.show', compact('comic'));
+        }
+        
     }
 
     /**
@@ -93,8 +126,10 @@ class ComicController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Comic $comic)
     {
-        //
+        $comic->delete();
+
+        return view('comics.index', compact('comic'));
     }
 }
